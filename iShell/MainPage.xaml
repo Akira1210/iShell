@@ -1,0 +1,59 @@
+﻿<Page
+    x:Class="iShell.MainPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:iShell"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d"
+    Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+
+    <Grid x:Name="MainGrid" Background="{ThemeResource SystemControlAcrylicWindowBrush}" RowSpacing="20" ColumnSpacing="20">
+
+        <TextBlock x:Name="tbVer" TextWrapping="Wrap" Text="Loading Version Information..." HorizontalAlignment="Right" VerticalAlignment="Bottom" Height="73" Width="349" Margin="0,0,11,9" TextAlignment="End"/>
+        <ListView x:Name="lvMain" Grid.ColumnSpan="2" Margin="57,146,57,98" CanDragItems="True" CanReorderItems="True" AllowDrop="True" ReorderMode="Enabled" CompositeMode="SourceOver" IsDoubleTapEnabled="False" ManipulationMode="None" IsTapEnabled="False" DragOver="lvMain_DragOver" DragStarting="lvMain_DragStarting" DragEnter="lvMain_DragEnter" Drop="lvMain_Drop" IsSynchronizedWithCurrentItem="False" SelectionMode="None">
+            <ListView.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <WrapGrid x:Name="wpServices" Orientation="Horizontal" ItemWidth="380" ItemHeight="300" CompositeMode="1" IsTapEnabled="False" IsDoubleTapEnabled="False" />
+                </ItemsPanelTemplate>
+            </ListView.ItemsPanel>
+        </ListView>
+        <Rectangle x:Name="recTopBar" VerticalAlignment="Top" FocusVisualPrimaryBrush="{x:Null}" Fill="{ThemeResource FlipViewButtonBackgroundThemeBrush}" Height="60"/>
+        <Button x:Name="cmdRefresh" Height="45" VerticalAlignment="Top" Width="162" Click="cmdRefresh_Click" Margin="21,8,0,0" Background="{ThemeResource ButtonBackgroundThemeBrush}" BorderBrush="{ThemeResource ButtonDisabledBorderThemeBrush}" BorderThickness="1,1,1,1">
+            <Canvas Width="50" Height="52">
+                <Path Data="M10.24 7.4a4.15 4.15 0 01-1.2 3.6 4.346 4.346 0 01-5.41.54L4.8 10.4.5 9.8l.6 4.2 1.31-1.26c2.36 1.74 5.7 1.57 7.84-.54a5.876 5.876 0 001.74-4.46l-1.75-.34zM2.96 5a4.346 4.346 0 015.41-.54L7.2 5.6l4.3.6-.6-4.2-1.31 1.26c-2.36-1.74-5.7-1.57-7.85.54C.5 5.03-.06 6.65.01 8.26l1.75.35A4.17 4.17 0 012.96 5z"
+          Stroke="{x:Null}"
+          Fill="{ThemeResource AppBarItemForegroundThemeBrush}"
+          Stretch="Uniform"
+          Width="35"
+          Height="26"
+          UseLayoutRounding="False"
+          StrokeThickness="0"
+          StrokeStartLineCap="flat"
+          StrokeEndLineCap="flat"
+          StrokeLineJoin="miter" Canvas.Top="3" Canvas.Left="-49" RenderTransformOrigin="-0.077,0.668"/>
+                <TextBlock TextWrapping="Wrap" Text="Aktualisieren" Canvas.Top="4" HorizontalAlignment="Center" VerticalAlignment="Top" FontSize="18" Canvas.Left="-8"/>
+            </Canvas>
+        </Button>
+        <TextBlock x:Name="tbTimeDate"
+           TextWrapping="Wrap"
+           Text="Loading.."
+           VerticalAlignment="Top"
+           HorizontalAlignment="Right"
+           Margin="0,10,10,0"
+           TextAlignment="Right"
+           Height="76"
+           Width="197" SelectionChanged="tbTimeDate_SelectionChanged" 
+           Tapped = "tbTimeDate_Tapped"
+           PointerEntered="tbTimeDate_PointerEntered"
+           PointerExited="tbTimeDate_PointerExited"/>
+        <TextBlock x:Name="splashText" TextWrapping="Wrap" Text="splashText" Margin="33,90,0,0" FontSize="48" FontFamily="Segoe UI Variable Display" SelectionChanged="splashText_SelectionChanged" CharacterSpacing="40" VerticalAlignment="Top" HorizontalAlignment="Left" FontStretch="Undefined" FontWeight="SemiBold"/>
+        <ProgressBar x:Name="pgbRefresh" HorizontalAlignment="Left" Height="7" Margin="22,45,0,0" VerticalAlignment="Top" Width="160" RenderTransformOrigin="0.5,0.5" Opacity="0.95" CornerRadius="4,4,0,0" Background="{x:Null}">
+            <ProgressBar.RenderTransform>
+                <CompositeTransform ScaleY="-1"/>
+            </ProgressBar.RenderTransform>
+        </ProgressBar>
+        <ProgressRing x:Name="loadSpinner" Height="50" Width="50" Margin="0,0,150,0"/>
+        <TextBlock x:Name="loadText" SelectionChanged="loadText_SelectionChanged" Text="loadText" FontSize="20" CharacterSpacing="30" FontStretch="ExtraCondensed" HorizontalAlignment="Center" VerticalAlignment="Center" Width="200" Margin="150,0,0,0" />
+    </Grid>
+</Page>
