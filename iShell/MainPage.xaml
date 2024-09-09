@@ -11,12 +11,18 @@
     <Grid x:Name="MainGrid" Background="{ThemeResource SystemControlAcrylicWindowBrush}" RowSpacing="20" ColumnSpacing="20">
 
         <TextBlock x:Name="tbVer" TextWrapping="Wrap" Text="Loading Version Information..." HorizontalAlignment="Right" VerticalAlignment="Bottom" Height="73" Width="349" Margin="0,0,11,9" TextAlignment="End"/>
-        <ListView x:Name="lvMain" Grid.ColumnSpan="2" Margin="57,146,57,98" CanDragItems="True" CanReorderItems="True" AllowDrop="True" ReorderMode="Enabled" CompositeMode="SourceOver" IsDoubleTapEnabled="False" ManipulationMode="None" IsTapEnabled="False" DragOver="lvMain_DragOver" DragStarting="lvMain_DragStarting" DragEnter="lvMain_DragEnter" Drop="lvMain_Drop" IsSynchronizedWithCurrentItem="False" SelectionMode="None">
+        <ListView x:Name="lvMain" Grid.ColumnSpan="2" Margin="57,146,57,98" CanDragItems="True" CanReorderItems="True" AllowDrop="True" ReorderMode="Enabled" CompositeMode="SourceOver" IsDoubleTapEnabled="False" ManipulationMode="None" IsTapEnabled="False" DragOver="lvMain_DragOver" DragStarting="lvMain_DragStarting" DragEnter="lvMain_DragEnter" Drop="lvMain_Drop" IsSynchronizedWithCurrentItem="False" SelectionMode="None" CharacterSpacing="20">
             <ListView.ItemsPanel>
                 <ItemsPanelTemplate>
-                    <WrapGrid x:Name="wpServices" Orientation="Horizontal" ItemWidth="380" ItemHeight="300" CompositeMode="1" IsTapEnabled="False" IsDoubleTapEnabled="False" />
+                    <WrapGrid x:Name="wpServices" Orientation="Horizontal" ItemWidth="380" ItemHeight="310" CompositeMode="1" IsTapEnabled="False" IsDoubleTapEnabled="False"/>
                 </ItemsPanelTemplate>
             </ListView.ItemsPanel>
+            <ListView.ItemContainerStyle>
+                <Style TargetType="ListViewItem">
+                    <Setter Property="Margin" Value="0, 12, 0, 12"/>
+                </Style>
+            </ListView.ItemContainerStyle>
+
         </ListView>
         <Rectangle x:Name="recTopBar" VerticalAlignment="Top" FocusVisualPrimaryBrush="{x:Null}" Fill="{ThemeResource FlipViewButtonBackgroundThemeBrush}" Height="60"/>
         <Button x:Name="cmdRefresh" Height="45" VerticalAlignment="Top" Width="162" Click="cmdRefresh_Click" Margin="21,8,0,0" Background="{ThemeResource ButtonBackgroundThemeBrush}" BorderBrush="{ThemeResource ButtonDisabledBorderThemeBrush}" BorderThickness="1,1,1,1">

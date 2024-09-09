@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using System.Runtime.InteropServices;
@@ -20,27 +19,22 @@ using System.Security.Principal;
 using System.Text;
 using Newtonsoft.Json.Linq;
 using System.Net;
+using System.IO.Compression;
 
 // Die Elementvorlage "Leere Seite" wird unter https://go.microsoft.com/fwlink/?LinkId=402352&clcid=0x407 dokumentiert.
 
 namespace iShell
 {
-    /// <summary>
-    /// Eine leere Seite, die eigenständig verwendet oder zu der innerhalb eines Rahmens navigiert werden kann.
-    /// </summary>
-    /// 
-    //Todo Wetter Warnung, 
     public sealed partial class MainPage : Page
     {
-        List<object> items = new List<object>();
         int refreshTime = 0;
         int activeItem = 0;
         Windows.UI.Xaml.Media.Brush internetFail = null;
         Windows.UI.Xaml.Media.Brush internetSuccess = null;
+        AcrylicBrush tileBorder = new AcrylicBrush();
         Boolean internet = true;
         public MainPage()
         {
-
             this.InitializeComponent();
             tbTimeDate.Visibility = Visibility.Collapsed;
             cmdRefresh.Visibility = Visibility.Collapsed;
@@ -60,8 +54,6 @@ namespace iShell
             internetFail = internetFailBrush;
             internetSuccess = recTopBar.Fill;
             testInternet();
-
-
         }
 
         private void testInternet()
@@ -99,18 +91,24 @@ namespace iShell
             if (internet)
             {
                 lvMain.Items.Clear();
+                //Add tiles here to load
+
                 DBInfo(0);
                 DBInfo(1);
                 DBInfo(2);
                 DBInfo(3);
                 DWDWeather();
+                foreach (ListView item in lvMain.Items)
+                {
+                    //tileBorder = cmdRefresh.Background;
+                    //item.BorderBrush = cmdRefresh.Background;
+                    item.Background = recTopBar.Fill;
+                    //item.BorderThickness = new Thickness(2);
+
+                }
             }
+
             InitAnim(0);
-            items.Clear();
-            for (int i = 0; i < lvMain.Items.Count; i++)
-            {
-                items.Add(lvMain.Items[i]);
-            }
         }
         private String SetVersionLabel()
         {
@@ -120,7 +118,7 @@ namespace iShell
             BuildDate = BuildDate.Replace(".", "");
             BuildDate = BuildDate.Replace(" ", "_");
 
-            return Assembly.GetExecutingAssembly().GetName().Name + "\nInternal" + " \nBuild 5." + ProcessArch + ".iot." + BuildDate + "\n" + System.Environment.OSVersion;
+            return Assembly.GetExecutingAssembly().GetName().Name + "\nInternal" + " \nBuild 6." + ProcessArch + ".iot." + BuildDate + "\n" + System.Environment.OSVersion;
         }
 
         private void tbTimeDate_PointerEntered(object sender, PointerRoutedEventArgs e)
@@ -207,162 +205,6 @@ namespace iShell
             var dt = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
             return dt.AddSeconds(secondsSince1970 + 7200);
         }
-
-        public async void checkFileAccess() 
-        {
-            try
-            {
-                StorageFile storageFile = await StorageFile.GetFileFromPathAsync(Windows.ApplicationModel.Package.Current.InstalledLocation.Path);
-            }
-            catch (Exception)
-            {
-                // prompt user for what action they should do then launch below
-                // suggestion could be a message prompt
-                await Launcher.LaunchUriAsync(new Uri("ms-settings:appsfeatures-app"));
-            }
-
-        }
-
-        public void DBInfo(int route)
-        {
-            ListView grid = new ListView();
-            TextBlock textBlock = new TextBlock();
-            String StartStation = "";
-            String EndStation = "";
-            String URLString = "";
-
-
-            //Eicholzheim - Eberbach
-            if (route == 0)
-            {
-                StartStation = "Eicholzheim";
-                EndStation = "Eberbach";
-                URLString = "https://www.bahn.de/buchung/fahrplan/suche#sts=true&so=Eicholzheim&zo=Eberbach&kl=2&r=13:16:KLASSENLOS:1&soid=A%3D1%40O%3DEicholzheim%40X%3D9290316%40Y%3D49432437%40U%3D80%40L%3D8001707%40B%3D1%40p%3D1723490478%40i%3DU%C3%97008014153%40&zoid=A%3D1%40O%3DEberbach%40X%3D8984152%40Y%3D49465769%40U%3D80%40L%3D8000369%40B%3D1%40p%3D1723490478%40i%3DU%C3%97008014121%40&sot=ST&zot=ST&soei=8001707&zoei=8000369";
-            }
-            //Eberbach - Eicholzheim
-            if (route == 1) 
-            {
-                StartStation = "Eberbach";
-                EndStation = "Eicholzheim";
-                URLString = "https://www.bahn.de/buchung/fahrplan/suche#sts=true&so=Eberbach&zo=Eicholzheim&kl=2&r=13:16:KLASSENLOS:1&soid=A%3D1%40O%3DEberbach%40X%3D8984152%40Y%3D49465769%40U%3D80%40L%3D8000369%40B%3D1%40p%3D1723490478%40i%3DU%C3%97008014121%40&zoid=A%3D1%40O%3DEicholzheim%40X%3D9290316%40Y%3D49432437%40U%3D80%40L%3D8001707%40B%3D1%40p%3D1723490478%40i%3DU%C3%97008014153%40&sot=ST&zot=ST&soei=8000369&zoei=8001707";
-            }
-
-            //Mosbach - Eicholzheim
-            if (route == 2)
-            {
-                StartStation = "Mosbach (Baden)";
-                EndStation = "Eicholzheim";
-                URLString = "https://www.bahn.de/buchung/fahrplan/suche#sts=true&so=Mosbach(Baden)&zo=Eicholzheim&kl=2&r=13:16:KLASSENLOS:1&soid=A%3D1%40O%3DMosbach(Baden)%40X%3D9143657%40Y%3D49352559%40U%3D80%40L%3D8004094%40B%3D1%40p%3D1723671445%40i%3DU%C3%97008014136%40&zoid=A%3D1%40O%3DEicholzheim%40X%3D9290316%40Y%3D49432437%40U%3D80%40L%3D8001707%40B%3D1%40p%3D1723490478%40i%3DU%C3%97008014153%40&sot=ST&zot=ST&soei=8004094&zoei=8001707";
-            }
-
-            //Eicholzheim - Mosbach
-            if (route == 3)
-            {
-                StartStation = "Eicholzheim";
-                EndStation = "Mosbach (Baden)";
-                URLString = "https://www.bahn.de/buchung/fahrplan/suche#sts=true&so=Eicholzheim&zo=Mosbach(Baden)&kl=2&r=13:16:KLASSENLOS:1&soid=A%3D1%40O%3DEicholzheim%40X%3D9290316%40Y%3D49432437%40U%3D80%40L%3D8001707%40B%3D1%40p%3D1723490478%40i%3DU%C3%97008014153%40&zoid=A%3D1%40O%3DMosbach(Baden)%40X%3D9143657%40Y%3D49352559%40U%3D80%40L%3D8004094%40B%3D1%40p%3D1723671445%40i%3DU%C3%97008014136%40&sot=ST&zot=ST&soei=8001707&zoei=8004094";
-            }
-
-
-            Uri uri = new Uri(URLString);
-            textBlock.Text = "DB: Von "+ StartStation + " nach " + EndStation + ":";
-            textBlock.FontWeight = FontWeights.Bold;
-            grid.Items.Add(textBlock);
-            TextBlock seperator = new TextBlock();
-            seperator.Text = "---------------------------------------------------------------------------";
-            grid.Items.Add(seperator);
-
-
-
-            WebView2 webView = new WebView2();
-            webView.NavigationCompleted += WebView_NavigationCompleted;
-            webView.Source = uri;
-            webView.Width = 350;
-            webView.Height = 200;
-            webView.IsHitTestVisible = false;
-            
-            grid.Items.Add(webView);
-            grid.Height = 300;
-
-            lvMain.Items.Add(grid);
-            
-        }
-
-        public async void DWDWeather()
-        {
-
-            //VORHERSAGE
-
-            ListView listView = new ListView();
-
-            //Station IDs:https://www.dwd.de/DE/leistungen/klimadatendeutschland/statliste/statlex_html.html?view=nasPublication&nn=16102
-            String station = "Q055";
-            Uri uri = new Uri("https://app-prod-ws.warnwetter.de/v30/stationOverviewExtended?stationIds="+station);
-            HttpClient client = new HttpClient();
-            Task<HttpResponseMessage> httpResponse = client.GetAsync(uri);
-            HttpResponseMessage message = httpResponse.Result;;
-            TextBlock textBox = new TextBlock();
-            textBox.IsTextSelectionEnabled=true;
-            Encoding iso = Encoding.GetEncoding("ISO-8859-1");
-            Encoding utf8 = Encoding.UTF8;
-            byte[] utfBytes = message.Content.ReadAsByteArrayAsync().Result;
-            byte[] isoBytes = Encoding.Convert(utf8, iso, utfBytes);
-            JObject json = JObject.Parse(iso.GetString(isoBytes));
-            JToken jToken = new JObject();
-            json.TryGetValue(station, out jToken);
-            if (jToken != null)
-            {
-                jToken = jToken.SelectToken("days").First;
-                TextBlock stationName = new TextBlock();
-                stationName.Text = "Wetter in Buchen";
-                stationName.FontWeight = FontWeights.Bold;
-                TextBlock date = new TextBlock();
-                date.Text = "Vorhersage für " + jToken.SelectToken("dayDate").ToString();
-                TextBlock temp = new TextBlock();
-                temp.Text = "Temperatur: " + ((int)jToken.SelectToken("temperatureMin")) / 10 + " - " + ((int)jToken.SelectToken("temperatureMax")) / 10 + " °C";
-                TextBlock rain = new TextBlock();
-                rain.Text = "Regenwahrscheinlichkeit: " + jToken.SelectToken("precipitation").ToString() + " %";
-                TextBlock windSpeed = new TextBlock();
-                windSpeed.Text = "Wind Geschwindigkeit : " + ((int)jToken.SelectToken("windSpeed")) / 10 + " km/h";
-
-                listView.Items.Add(stationName);
-                listView.Items.Add(date);
-                listView.Items.Add(temp);
-                listView.Items.Add(rain);
-                listView.Items.Add(windSpeed);
-
-            }
-            listView.Height = 300;
-            lvMain.Items.Add(listView);
-
-            //WETTERWARNUNG
-
-            ListView listViewWarn = new ListView();
-
-
-            uri = new Uri("https://s3.eu-central-1.amazonaws.com/app-prod-static.warnwetter.de/v16/gemeinde_warnings_v2.json");
-            JObject jsonWarn = new JObject();
-            TextBox textBox1 = new TextBox();
-            using (WebClient wc = new WebClient())
-            {
-                wc.Encoding = Encoding.ASCII;
-                var jsonStr = wc.DownloadData(uri);
-                //jsonWarn = JObject.Parse(System.Text.Encoding.Default.GetString(jsonStr));
-                textBox1.Text = System.Text.Encoding.Default.GetString(jsonStr);
-            }
-
-            //jsonWarn = JObject.Parse(jsonStr);
-            
-            
-            
-            listViewWarn.Items.Add(textBox1);
-            lvMain.Items.Add(listViewWarn);
-
-
-        }
-
-
-
 
         private void WebView_NavigationCompleted(WebView2 sender, Microsoft.Web.WebView2.Core.CoreWebView2NavigationCompletedEventArgs args)
         {
@@ -496,15 +338,184 @@ namespace iShell
 
         private void lvMain_Drop(object sender, DragEventArgs e)
         {
-            items.Clear();
-            for (int i = 0; i < lvMain.Items.Count; i++)
-            {
-                items.Add(lvMain.Items[i]);
-            }
         }
 
         private void loadText_SelectionChanged(object sender, RoutedEventArgs e)
         {
+
+        }
+  
+        //Tiles
+        
+        public void DBInfo(int route)
+        {
+            ListView grid = new ListView();
+            TextBlock textBlock = new TextBlock();
+            String StartStation = "";
+            String EndStation = "";
+            String URLString = "";
+
+
+            //Eicholzheim - Eberbach
+            if (route == 0)
+            {
+                StartStation = "Eicholzheim";
+                EndStation = "Eberbach";
+                URLString = "https://www.bahn.de/buchung/fahrplan/suche#sts=true&so=Eicholzheim&zo=Eberbach&kl=2&r=13:16:KLASSENLOS:1&soid=A%3D1%40O%3DEicholzheim%40X%3D9290316%40Y%3D49432437%40U%3D80%40L%3D8001707%40B%3D1%40p%3D1723490478%40i%3DU%C3%97008014153%40&zoid=A%3D1%40O%3DEberbach%40X%3D8984152%40Y%3D49465769%40U%3D80%40L%3D8000369%40B%3D1%40p%3D1723490478%40i%3DU%C3%97008014121%40&sot=ST&zot=ST&soei=8001707&zoei=8000369";
+            }
+            //Eberbach - Eicholzheim
+            if (route == 1)
+            {
+                StartStation = "Eberbach";
+                EndStation = "Eicholzheim";
+                URLString = "https://www.bahn.de/buchung/fahrplan/suche#sts=true&so=Eberbach&zo=Eicholzheim&kl=2&r=13:16:KLASSENLOS:1&soid=A%3D1%40O%3DEberbach%40X%3D8984152%40Y%3D49465769%40U%3D80%40L%3D8000369%40B%3D1%40p%3D1723490478%40i%3DU%C3%97008014121%40&zoid=A%3D1%40O%3DEicholzheim%40X%3D9290316%40Y%3D49432437%40U%3D80%40L%3D8001707%40B%3D1%40p%3D1723490478%40i%3DU%C3%97008014153%40&sot=ST&zot=ST&soei=8000369&zoei=8001707";
+            }
+
+            //Mosbach - Eicholzheim
+            if (route == 2)
+            {
+                StartStation = "Mosbach (Baden)";
+                EndStation = "Eicholzheim";
+                URLString = "https://www.bahn.de/buchung/fahrplan/suche#sts=true&so=Mosbach(Baden)&zo=Eicholzheim&kl=2&r=13:16:KLASSENLOS:1&soid=A%3D1%40O%3DMosbach(Baden)%40X%3D9143657%40Y%3D49352559%40U%3D80%40L%3D8004094%40B%3D1%40p%3D1723671445%40i%3DU%C3%97008014136%40&zoid=A%3D1%40O%3DEicholzheim%40X%3D9290316%40Y%3D49432437%40U%3D80%40L%3D8001707%40B%3D1%40p%3D1723490478%40i%3DU%C3%97008014153%40&sot=ST&zot=ST&soei=8004094&zoei=8001707";
+            }
+
+            //Eicholzheim - Mosbach
+            if (route == 3)
+            {
+                StartStation = "Eicholzheim";
+                EndStation = "Mosbach (Baden)";
+                URLString = "https://www.bahn.de/buchung/fahrplan/suche#sts=true&so=Eicholzheim&zo=Mosbach(Baden)&kl=2&r=13:16:KLASSENLOS:1&soid=A%3D1%40O%3DEicholzheim%40X%3D9290316%40Y%3D49432437%40U%3D80%40L%3D8001707%40B%3D1%40p%3D1723490478%40i%3DU%C3%97008014153%40&zoid=A%3D1%40O%3DMosbach(Baden)%40X%3D9143657%40Y%3D49352559%40U%3D80%40L%3D8004094%40B%3D1%40p%3D1723671445%40i%3DU%C3%97008014136%40&sot=ST&zot=ST&soei=8001707&zoei=8004094";
+            }
+
+
+            Uri uri = new Uri(URLString);
+            textBlock.Text = "DB: Von " + StartStation + " nach " + EndStation + ":";
+            textBlock.FontWeight = FontWeights.Bold;
+            grid.Items.Add(textBlock);
+            TextBlock seperator = new TextBlock();
+            seperator.Text = "---------------------------------------------------------------------------";
+            grid.Items.Add(seperator);
+
+
+
+            WebView2 webView = new WebView2();
+            webView.NavigationCompleted += WebView_NavigationCompleted;
+            webView.Source = uri;
+            webView.Width = 350;
+            webView.Height = 200;
+            webView.IsHitTestVisible = false;
+
+            grid.Items.Add(webView);
+            grid.Height = 300;
+
+            lvMain.Items.Add(grid);
+
+        }
+
+        public async void DWDWeather()
+        {
+
+            //Station IDs:https://www.dwd.de/DE/leistungen/klimadatendeutschland/statliste/statlex_html.html?view=nasPublication&nn=16102
+            
+            ListView listView = new ListView();
+            String station = "Q055";
+            String coord1 = "49.5182";
+            String coord2 = "9.3213";
+
+            TextBlock seperator = new TextBlock();
+            TextBlock seperator2 = new TextBlock();
+            seperator.Text = "---------------------------------------------------------------------------";
+            seperator2.Text = seperator.Text;
+
+            //VORHERSAGE
+
+            Uri uri = new Uri("https://app-prod-ws.warnwetter.de/v30/stationOverviewExtended?stationIds=" + station);
+            HttpClient client = new HttpClient();
+            Task<HttpResponseMessage> httpResponse = client.GetAsync(uri);
+            HttpResponseMessage message = httpResponse.Result;
+            TextBlock textBox = new TextBlock();
+
+            Encoding iso = Encoding.GetEncoding("ISO-8859-1");
+            Encoding utf8 = Encoding.UTF8;
+            byte[] utfBytes = message.Content.ReadAsByteArrayAsync().Result;
+            byte[] isoBytes = Encoding.Convert(utf8, iso, utfBytes);
+
+            JObject json = JObject.Parse(iso.GetString(isoBytes));
+            JToken jToken = new JObject();
+            json.TryGetValue(station, out jToken);
+            if (jToken != null)
+            {
+                jToken = jToken.SelectToken("days").First;
+                TextBlock forecast = new TextBlock();
+                TextBlock stationName = new TextBlock();
+                stationName.Text = "Wetter in Buchen";
+                stationName.FontWeight = FontWeights.Bold;
+
+                forecast.Text += "Vorhersage für " + jToken.SelectToken("dayDate").ToString() + "\n";
+
+                forecast.Text += "Temperatur: " + ((int)jToken.SelectToken("temperatureMin")) / 10 + " - " + ((int)jToken.SelectToken("temperatureMax")) / 10 + " °C" + "\n";
+
+                forecast.Text += "Regenwahrscheinlichkeit: " + jToken.SelectToken("precipitation").ToString() + " %" + "\n";
+
+                forecast.Text += "Wind Geschwindigkeit : " + ((int)jToken.SelectToken("windSpeed")) / 10 + " km/h";
+
+                listView.Items.Add(stationName);
+                listView.Items.Add(seperator);
+                listView.Items.Add(forecast);
+
+            }
+            listView.Height = 300;
+            lvMain.Items.Add(listView);
+
+            //WETTERWARNUNG
+
+            ListView listViewWarn = new ListView();
+
+
+            uri = new Uri("https://s3.eu-central-1.amazonaws.com/app-prod-static.warnwetter.de/v16/gemeinde_warnings_v2.json");
+            JObject jsonWarn = new JObject();
+            TextBlock textWarn = new TextBlock();
+            textWarn.IsTextSelectionEnabled = true;
+            
+            using (WebClient wc = new WebClient())
+            {
+                wc.Headers[HttpRequestHeader.AcceptEncoding] = "gzip";
+                wc.Headers.Add("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.14; rv:89.0) Gecko/20100101 Firefox/89.0");
+
+                wc.Headers[HttpRequestHeader.AcceptEncoding] = "gzip";
+                var responseStream = new GZipStream(wc.OpenRead(uri), CompressionMode.Decompress);
+                var reader = new StreamReader(responseStream);
+                var textResponse = reader.ReadToEnd();
+                json = JObject.Parse(textResponse);
+                json.TryGetValue("warnings", out jToken);
+                foreach (JToken item in jToken)
+                {
+                    if (item.SelectToken("regions").ToString().Contains(coord1)&&
+                        item.SelectToken("regions").ToString().Contains(coord2)) {
+                        if (textWarn.Text != "") textWarn.Text += "\n";
+                        textWarn.Text += item.SelectToken("event").ToString();
+                        textWarn.Text += "\n" + item.SelectToken("description").ToString();
+                    }
+                }
+
+                if (textWarn.Text == "") { 
+                    textWarn.Text = "Keine Warnungen oder Vorabinformationen für diesen Standort verfügbar"; 
+                    textWarn.FontStyle = FontStyle.Italic;
+                }
+
+            }
+
+            TextBlock warnPos = new TextBlock();
+            warnPos.FontWeight = FontWeights.Bold;
+            warnPos.Text = "Warnungen für " + coord1 + " " + coord2;
+
+            listViewWarn.Items.Add(warnPos);
+            listViewWarn.Items.Add(seperator2);
+            listViewWarn.Items.Add(textWarn);
+            textWarn.TextWrapping = TextWrapping.Wrap;
+            listViewWarn.Height = 300;
+            lvMain.Items.Add(listViewWarn);
+
 
         }
     }
