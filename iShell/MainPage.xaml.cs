@@ -7,8 +7,6 @@ using Windows.UI.Xaml.Controls;
 using Windows.UI.Xaml.Input;
 using Windows.UI.Xaml.Media;
 using System.Threading.Tasks;
-using Windows.Storage;
-using Windows.System;
 using Microsoft.UI.Xaml.Controls;
 using Windows.UI.Text;
 using Windows.UI.Xaml.Media.Animation;
@@ -22,14 +20,8 @@ using System.Net;
 using System.IO.Compression;
 using System.Collections.Generic;
 using Windows.Foundation;
-using Windows.ApplicationModel.Activation;
-using System.ComponentModel;
 using Windows.UI.Xaml.Data;
-using Windows.UI.Xaml.Shapes;
 using Windows.UI.Xaml.Controls.Primitives;
-using Microsoft.UI.Xaml.Media;
-using Microsoft.OpenApi.Writers;
-using Windows.Devices.Enumeration;
 
 // Die Elementvorlage "Leere Seite" wird unter https://go.microsoft.com/fwlink/?LinkId=402352&clcid=0x407 dokumentiert.
 
@@ -46,22 +38,24 @@ namespace iShell
         List<ListView> lvWidgets = new System.Collections.Generic.List<ListView>();
         Boolean firstLoad = true;
         TextBlock clockTime;
+        Dictionary<String, Boolean> widgetEnabled = new Dictionary<String, Boolean>();
+        Boolean allWidgetsPage = false;
 
+        int widgetSize = 3;
+        String cmdSizeText = "Klein";
+        //Size: 1= Small, 2=Medium, 3=Large (Default)
+
+        //---------------------------------------------------------------------------------------
+        //Methods
         public MainPage()
         {
             this.InitializeComponent();
-            tbTimeDate.Visibility = Visibility.Collapsed;
-            cmdRefresh.Visibility = Visibility.Collapsed;
-            recTopBar.Visibility = Visibility.Collapsed;
-            lvMain.Visibility = Visibility.Collapsed;
-            pgbRefresh.Visibility = Visibility.Collapsed;
-            networkStatus.Visibility = Visibility.Collapsed;
-            tbLanguage.Visibility = Visibility.Collapsed;
+            ElementsNotVisible();
             splashText.Text = "";
             loadSpinner.IsActive = true;
             loadText.Text = "Willkommen \n" + WindowsIdentity.GetCurrent().Name.Substring(WindowsIdentity.GetCurrent().Name.IndexOf("\\") + 1) + "";
             tbVer.Text = SetVersionLabel();
-
+            addItems();
             DispatcherTimer tClock = new DispatcherTimer();
             tClock.Tick += tClock_Tick;
             tClock.Interval = TimeSpan.FromSeconds(1);
@@ -77,8 +71,6 @@ namespace iShell
 
         private void testInternet()
         {
-
-
             HttpClient client = new HttpClient();
             try
             {
@@ -107,7 +99,7 @@ namespace iShell
                 BindingOperations.SetBinding(networkStatus, Windows.UI.Xaml.Shapes.Path.DataProperty, b);
                 if (splashText.Text.Equals("Übersicht"))
                     splashText.Text = "⚠️ Kein Netzwerkzugriff";
-                    
+
             }
             ToolTip toolTip = new ToolTip();
             toolTip.Placement = PlacementMode.Bottom;
@@ -118,69 +110,202 @@ namespace iShell
             ToolTipService.SetToolTip(networkStatusCanvas, toolTip);
         }
 
+        private void addItems()
+        {
+            widgetEnabled.Add("Clock()", true);
+            widgetEnabled.Add("CalendarTile()", true);
+            widgetEnabled.Add("DWDWeather(0, \"Q055\", null)", true);
+            widgetEnabled.Add("DWDWeather(1, \"49.5182\", \"9.3213\")", true);
+            widgetEnabled.Add("DBInfo(0)", false);
+            widgetEnabled.Add("DBInfo(1)", false);
+            widgetEnabled.Add("DBInfo(2)", false);
+            widgetEnabled.Add("DBInfo(3)", false);
+
+        }
+
+        private void addItemsToPanel(String methodName, String args)
+        {
+            if (methodName.Equals("Clock")) lvMain.Items.Add(Clock());
+            if (methodName.Equals("CalendarTile")) lvMain.Items.Add(CalendarTile());
+            if (methodName.Equals("DWDWeather"))
+            {
+                int arg1 = int.Parse(args.Substring(0, 1));
+                String arg2 = args.Substring(args.IndexOf(", \"") + 3, args.IndexOf("\",") - 4);
+                String arg3 = args.Substring(args.LastIndexOf("\", ") + 3);
+                arg3 = arg3.Replace("\"", "");
+                lvMain.Items.Add(DWDWeather(arg1, arg2, arg3));
+            }
+            if (methodName.Equals("DBInfo"))
+            {
+                int arg1 = int.Parse(args.Substring(0, 1));
+                lvMain.Items.Add(DBInfo(arg1));
+            }
+
+        }
+
         private void loadItems()
         {
-            ElementsVisible();
-
+            lvMain.Items.Clear();
             if (internet)
             {
-                lvMain.Items.Clear();
-                //Add tiles here to load
-
-                if (firstLoad)
+                if (firstLoad || allWidgetsPage)
                 {
-                    lvMain.Items.Add(Clock());
-                    lvMain.Items.Add(CalendarTile());
-                    lvMain.Items.Add(DWDWeather(0, "Q055", null));
-                    lvMain.Items.Add(DWDWeather(1, "49.5182", "9.3213"));
-                    lvMain.Items.Add(DBInfo(0));
-                    lvMain.Items.Add(DBInfo(1));
-                    lvMain.Items.Add(DBInfo(2));
-                    lvMain.Items.Add(DBInfo(3));
-                    
-                    foreach (ListView item in lvMain.Items)
+                    ElementsVisible();
+                    foreach (var item in widgetEnabled)
                     {
-                        lvWidgets.Add(item);
-                    }
-                }
-                if (!firstLoad)
-                {
-                    List<ListView> reloadWidgets = new System.Collections.Generic.List<ListView>();
-                    reloadWidgets.Add(DBInfo(0));
-                    reloadWidgets.Add(DBInfo(1));
-                    reloadWidgets.Add(DBInfo(2));
-                    reloadWidgets.Add(DBInfo(3));
-                    reloadWidgets.Add(DWDWeather(0, "Q055", null));
-                    reloadWidgets.Add(DWDWeather(1, "49.5182", "9.3213"));
-                    reloadWidgets.Add(CalendarTile());
-                    reloadWidgets.Add(Clock());
-                    for (int i = 0; i < reloadWidgets.Count; i++)
-                    {
-                        for (int j = 0; j < reloadWidgets.Count; j++) { 
-                            if (lvWidgets[i].Name.Equals(reloadWidgets[j].Name)) {
-                                lvWidgets[i]=reloadWidgets[j];
-                                lvMain.Items.Add(lvWidgets[i]);
-                                break;
-                            }   
+                        if (item.Value.Equals(true) || allWidgetsPage)
+                        {
+                            loadTile(item);
                         }
                     }
                 }
+                if (!firstLoad && !allWidgetsPage)
+                {
+                    ElementsVisible();
+                    foreach (var itemW in lvWidgets)
+                    {
+                        foreach (var item in widgetEnabled)
+                        {
+                            if (item.Value.Equals(true) && itemW.Name.Equals(item.Key))
+                            {
+                                loadTile(item);
+                                break;
+                            }
+                        }
+                    }
+                    if (lvWidgets.Count!=widgetEnabled.Count)
+                    {
+                        foreach (var item in widgetEnabled)
+                        {
+                            Boolean newItem=true;
+                            foreach ( var itemW in lvWidgets) {
+                                if (itemW.Name.Equals(item.Key) && item.Value.Equals(true))
+                                {
+                                    newItem=false;
+                                    break;
+                                }
+                                else if (item.Value.Equals(true))
+                                {
+                                    newItem=true;
+                                }
 
-                //Design for widgets
+                            }
+                            if (newItem && item.Value.Equals(true))
+                            {
+                                loadTile(item);
+                            }
+                            if (lvWidgets.Count == widgetEnabled.Count) break;
+                        }
+                    }
+                }
+            }
+            if (!allWidgetsPage)
+            {
+                lvWidgets.Clear();
                 foreach (ListView item in lvMain.Items)
                 {
-                    if (item.Background == null)
-                    item.Background = recTopBar.Fill;
-                    item.PointerEntered += lvItem_PointerEntered;
-                    item.PointerExited += lvItem_PointerExited;
-                    item.CornerRadius = new CornerRadius(20,20,20,20);
-                    item.ShowsScrollingPlaceholders = false;
-
+                    lvWidgets.Add(item);
                 }
-                firstLoad = false;
+            }
+            //Design for widgets
+            foreach (ListView item in lvMain.Items)
+            {
+                if (item.Background == null)
+                    item.Background = recTopBar.Fill;
+                item.PointerEntered += lvItem_PointerEntered;
+                item.PointerExited += lvItem_PointerExited;
+                item.CornerRadius = new CornerRadius(20, 20, 20, 20);
+                item.ShowsScrollingPlaceholders = false;
+                Flyout flyout = new Flyout();
+                ListView flyoutItems = new ListView();
+                Button cmdRem = new Button();
+                cmdRem.Click += CmdRem_Click;
+                cmdRem.Name = "cmdRem" + item.Name;
+                Button cmdSize = new Button();
+                cmdSize.Click += CmdSize_Click;
+                cmdSize.Name = "cmdSize" + item.Name;
+                cmdSize.Content = cmdSizeText;
+                if (!allWidgetsPage)
+                    cmdRem.Content = "Entfernen";
+
+                if (allWidgetsPage)
+                {
+                    bool value;
+                    widgetEnabled.TryGetValue(item.Name, out value);
+                    if (value)
+                    {
+                        cmdRem.Content = "Entfernen";
+                    }
+                    if (!value)
+                    {
+                        cmdRem.Content = "Hinzufügen";
+                    }
+                }
+                flyoutItems.Items.Add(cmdRem);
+                if (!allWidgetsPage)
+                flyoutItems.Items.Add(cmdSize);
+                flyout.Content = flyoutItems;
+                flyout.AreOpenCloseAnimationsEnabled = true;
+                item.ContextFlyout = flyout;
+                
+            }
+            firstLoad = false;
+            if (lvMain.Items.Count==0)
+            {
+                TextBlock textBlock = new TextBlock();
+                textBlock.Text = "Keine Elemente verfügbar";
+                textBlock.FontStyle = FontStyle.Italic;
+                lvMain.Items.Add(textBlock);
+            }
+        }
+
+        private void loadTile(KeyValuePair<String, Boolean> item)
+        {
+            try
+            {
+                String args = item.Key.Substring(item.Key.IndexOf("("));
+                args = args.Replace("(", "");
+                args = args.Replace(")", "");
+                addItemsToPanel(item.Key.Substring(0, item.Key.IndexOf("(")), args);
+            }
+            catch { addItemsToPanel(item.Key.Substring(0, item.Key.IndexOf("(")), String.Empty); }
+        }
+
+        private int getTileSize(int Type)
+        {
+            if (widgetSize == 3 || allWidgetsPage)
+            {
+                if (Type == 0)
+                    return 340;
+                if (Type == 1)
+                    return 380;
             }
 
-            InitAnim(0);
+            if (widgetSize == 1)
+            {
+                if (Type == 0)
+                    return 170;
+                if (Type == 1) 
+                    return 190;
+            }
+
+            if (widgetSize == 2)
+            {
+                if (Type == 0)
+                    return 170;
+                if (Type == 1)
+                    return 380;
+            }
+
+            if (widgetSize == 4)
+            {
+                if (Type == 0)
+                    return 680;
+                if (Type == 1)
+                    return 760;
+            }
+
+            return 0;
         }
 
         private String SetVersionLabel()
@@ -191,84 +316,13 @@ namespace iShell
             BuildDate = BuildDate.Replace(".", "");
             BuildDate = BuildDate.Replace(" ", "_");
 
-            return Assembly.GetExecutingAssembly().GetName().Name + "\nInternal" + " \nBuild 8." + ProcessArch + ".iot." + BuildDate + "\n" + System.Environment.OSVersion;
-        }
-
-        private void tClock_Tick(object sender, object e)
-        {
-            tbTimeDate.Text = System.DateTime.Now.ToString("HH:mm") + " Uhr" + System.Environment.NewLine +
-                System.DateTime.Now.Date.ToString("d");
-
-            if (clockTime!=null)
-            clockTime.Text = System.DateTime.Now.ToString("HH:mm:ss") + " Uhr\n" + "---------------\n"+
-                    System.DateTime.Now.ToString("dddd") + System.Environment.NewLine + System.DateTime.Now.Date.ToString("d");
-
-            refreshTime++;
-            pgbRefresh.Value = refreshTime/3;
-            if (refreshTime > 300)
-            {
-                refreshTime = 0;
-                splashText.Text = "";
-                ElementsNotVisible();
-                loadSpinner.IsActive = true;
-                loadText.Text = "Aktualisiere Inhalte...";
-            }
-            if (refreshTime % 10 == 0)
-            {
-                activeItem++;
-                if (activeItem==lvMain.Items.Count)
-                    activeItem = 0;
-                lvMain.ScrollIntoView(lvMain.Items[activeItem]);
-                bool internetBefore = internet;
-                testInternet();
-                if (internet && !internetBefore)
-                {
-                    refreshTime = 0;
-                    splashText.Text = "";
-                    loadSpinner.IsActive = true;
-                    loadText.Text = "Aktualisiere Inhalte...";
-                }
-
-                }
-            if (refreshTime == 1 && (splashText.Text.Equals(""))) {
-                if (internet == true)
-                    splashText.Text = "Übersicht";
-                else
-                    splashText.Text = "⚠️ Kein Netzwerkzugriff";
-                refreshTime = 0;
-                loadSpinner.IsActive = false;
-                loadText.Text = "";
-                loadItems();
-                }
-
-        }
-
-        public static DateTime GetLinkerTimestampUtc(Assembly assembly)
-        {
-            var location = assembly.Location;
-            return GetLinkerTimestampUtc(location);
-        }
-
-        public static DateTime GetLinkerTimestampUtc(string filePath)
-        {
-            const int peHeaderOffset = 60;
-            const int linkerTimestampOffset = 8;
-            var bytes = new byte[2048];
-
-            using (var file = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
-            {
-                file.Read(bytes, 0, bytes.Length);
-            }
-
-            var headerPos = BitConverter.ToInt32(bytes, peHeaderOffset);
-            var secondsSince1970 = BitConverter.ToInt32(bytes, headerPos + linkerTimestampOffset);
-            var dt = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
-            return dt.AddSeconds(secondsSince1970 + 7200);
+            return Assembly.GetExecutingAssembly().GetName().Name + "\nInternal" + " \nBuild 15." + ProcessArch + ".iot." + BuildDate + "\n" + System.Environment.OSVersion;
         }
 
         private async void pageScroll(WebView2 webView)
         {
-            if (webView != null) {
+            if (webView != null)
+            {
                 await webView.EnsureCoreWebView2Async();
                 await Task.Delay(3000);
                 await webView.ExecuteScriptAsync("window.scroll(0,340);");
@@ -316,8 +370,8 @@ namespace iShell
             recTopBar.RenderTransform = scaleTransformI;
 
             tbTimeDate.RenderTransform = moveTransform;
-            tbTimeDate.Transform3D= rotateProject;
-            tbTimeDate.RenderTransform= scaleTransformI;
+            tbTimeDate.Transform3D = rotateProject;
+            tbTimeDate.RenderTransform = scaleTransformI;
 
             networkStatus.RenderTransform = moveTransform;
             networkStatus.Transform3D = rotateProject;
@@ -325,7 +379,11 @@ namespace iShell
 
             tbLanguage.RenderTransform = moveTransform;
             tbLanguage.Transform3D = rotateProject;
-            tbLanguage.RenderTransform= scaleTransformI;
+            tbLanguage.RenderTransform = scaleTransformI;
+
+            cmdNextPage.RenderTransform = moveTransform;
+            cmdNextPage.Transform3D = rotateProject;
+            cmdNextPage.RenderTransform = scaleTransformI;
 
             Duration duration = new Duration(TimeSpan.FromSeconds(0.5));
             DoubleAnimation myDoubleAnimationX = new DoubleAnimation();
@@ -366,33 +424,105 @@ namespace iShell
             justintimeStoryboard.Begin();
         }
 
-        private void ElementsNotVisible()
+        private void InitChangePage(int direct)
         {
-            tbTimeDate.Visibility = Visibility.Collapsed;
-            cmdRefresh.Visibility = Visibility.Collapsed;
-            recTopBar.Visibility = Visibility.Collapsed;
-            lvMain.Visibility = Visibility.Collapsed;
-            pgbRefresh.Visibility = Visibility.Collapsed;
-            networkStatus.Visibility = Visibility.Collapsed;
-            tbLanguage.Visibility = Visibility.Collapsed;
+            TranslateTransform moveTransform = new TranslateTransform();
+
+            CompositeTransform3D rotateProject = new CompositeTransform3D();
+
+            ScaleTransform scaleTransformI = new ScaleTransform();
+
+            if (direct == 0 || direct == 1)
+            {
+                //rotateProject.RotationX = -10;
+                //rotateProject.RotationY = -95;
+                moveTransform.X = 0;
+                moveTransform.Y = 0;
+                //scaleTransformI.ScaleX = 1.5;
+            }
+            if (direct == 3)
+            {
+                //rotateProject.RotationX = -10;
+                //rotateProject.RotationY = -95;
+                moveTransform.X = MainGrid.ActualWidth;
+                moveTransform.Y = 0;
+                scaleTransformI.ScaleX = 0.5;
+            }
+
+            if (direct == 2)
+            {
+                moveTransform.X = -MainGrid.ActualWidth;
+                moveTransform.Y = 0;
+                scaleTransformI.ScaleX = 0.5;
+            }
+
+
+            // Objects for Anim.
+            splashText.RenderTransform = moveTransform;
+            splashText.Transform3D = rotateProject;
+            //splashText.RenderTransform = scaleTransformI;
+
+            lvMain.RenderTransform = moveTransform;
+            lvMain.Transform3D = rotateProject;
+            //lvMain.RenderTransform = scaleTransformI;
+
+            cmdNextPage.RenderTransform = moveTransform;
+
+
+            Duration duration = new Duration(TimeSpan.FromSeconds(0.2));
+            DoubleAnimation myDoubleAnimationX = new DoubleAnimation();
+            DoubleAnimation myDoubleAnimationY = new DoubleAnimation();
+            DoubleAnimation my3dRoationX = new DoubleAnimation();
+            DoubleAnimation my3dRoationY = new DoubleAnimation();
+            DoubleAnimation scaleTransformA = new DoubleAnimation();
+            myDoubleAnimationX.Duration = duration;
+            Storyboard justintimeStoryboard = new Storyboard();
+            justintimeStoryboard.Duration = duration;
+            justintimeStoryboard.Children.Add(myDoubleAnimationX);
+            Storyboard.SetTarget(myDoubleAnimationX, moveTransform);
+            Storyboard.SetTargetProperty(myDoubleAnimationX, "X");
+
+            if (direct == 0)
+            {
+                myDoubleAnimationX.To = MainGrid.ActualWidth;
+                myDoubleAnimationY.To = 0;
+                my3dRoationX.To = 0;
+                my3dRoationY.To = 0;
+                scaleTransformA.To = 1;
+            }
+
+            if (direct == 2 || direct == 3)
+            {
+                myDoubleAnimationX.To = 0;
+                myDoubleAnimationY.To = 0;
+                my3dRoationX.To = 0;
+                my3dRoationY.To = 0;
+                scaleTransformA.To = 1;
+            }
+
+            if (direct == 1)
+            {
+                myDoubleAnimationX.To = -MainGrid.ActualWidth;
+                myDoubleAnimationY.To = 0;
+                my3dRoationX.To = 0;
+                my3dRoationY.To = 0;
+                scaleTransformA.To = 1;
+            }
+
+
+            justintimeStoryboard.Begin();
+            if (direct == 0)
+                justintimeStoryboard.Completed += AnimDone2All;
+            if (direct == 1)
+                justintimeStoryboard.Completed += AnimDone2Start;
         }
 
-        private void ElementsVisible() 
-        {
-            tbTimeDate.Visibility = Visibility.Visible;
-            cmdRefresh.Visibility = Visibility.Visible;
-            recTopBar.Visibility = Visibility.Visible;
-            lvMain.Visibility = Visibility.Visible;
-            pgbRefresh.Visibility = Visibility.Visible;
-            networkStatus.Visibility = Visibility.Visible;
-            tbLanguage.Visibility = Visibility.Visible;
-        }
 
         //---------------------------------------------------------------------------------------
         //Tiles
         public ListView DBInfo(int route)
         {
-            ListView grid = new ListView();
+            ListView listView = new ListView();
             TextBlock textBlock = new TextBlock();
             String StartStation = "";
             String EndStation = "";
@@ -436,12 +566,13 @@ namespace iShell
 
 
             Uri uri = new Uri(URLString);
-            textBlock.Text = "DB: Von " + StartStation + " nach " + EndStation + ":";
+            textBlock.Text = "🚉 DB: Von " + StartStation + " nach " + EndStation + ":";
+            textBlock.TextWrapping = TextWrapping.Wrap;
             textBlock.FontWeight = FontWeights.Bold;
-            grid.Items.Add(textBlock);
+            listView.Items.Add(textBlock);
             TextBlock seperator = new TextBlock();
-            seperator.Text = "---------------------------------------------------------------------------";
-            grid.Items.Add(seperator);
+            seperator.Text = "------------------------------------------------------------------------------------------------------------------------------------------------------";
+            listView.Items.Add(seperator);
 
 
 
@@ -449,15 +580,16 @@ namespace iShell
             webView.NavigationCompleted += WebView_NavigationCompleted;
             webView.Source = uri;
             webView.Width = 350;
-            webView.Height = 200;
+            webView.Height = 220;
             webView.IsHitTestVisible = false;
 
-            grid.Items.Add(webView);
-            grid.Height = 300;
-            grid.Name = "DB" + route;
-            grid.Background = acrylicBrush;
+            listView.Items.Add(webView);
+            listView.Height = getTileSize(0);
+            listView.Width = getTileSize(1);
+            listView.Name = "DBInfo(" + route + ")";
+            listView.Background = acrylicBrush;
 
-            return grid;
+            return listView;
 
         }
 
@@ -465,7 +597,7 @@ namespace iShell
         {
 
             //Station IDs:https://www.dwd.de/DE/leistungen/klimadatendeutschland/statliste/statlex_html.html?view=nasPublication&nn=16102
-            Dictionary<int,String> map = new Dictionary<int,String>();
+            Dictionary<int, String> map = new Dictionary<int, String>();
             Dictionary<int, String> mapIcon = new Dictionary<int, String>();
 
             //Weather Ressources
@@ -502,12 +634,12 @@ namespace iShell
                 map.Add(30, "Gewitter, (starker Hagel)"); mapIcon.Add(30, "M539.825-76.549v0c-5.419 5.413-8.772 12.894-8.772 21.158s3.352 15.745 8.772 21.158l36.636 36.583h-11.966c-2.074 0.013-4.089 0.233-6.035 0.639l0.197-0.034c-0.92 0.184-1.736 0.526-2.63 0.789-1.201 0.305-2.183 0.62-3.14 0.986l0.194-0.065c-1.203 0.553-2.186 1.080-3.136 1.656l0.138-0.078c-0.71 0.394-1.473 0.71-2.157 1.157-3.31 2.244-6.076 5.018-8.242 8.229l-0.068 0.108c-0.473 0.684-0.763 1.446-1.157 2.13-0.498 0.811-1.024 1.794-1.498 2.807l-0.080 0.191c-0.298 0.759-0.613 1.741-0.876 2.744l-0.045 0.201c-0.263 0.894-0.605 1.736-0.789 2.63-0.366 1.763-0.576 3.79-0.576 5.865s0.21 4.102 0.609 6.059l-0.033-0.194c0.263 1.078 0.534 1.956 0.847 2.813l-0.059-0.183c0.509 2.262 1.373 4.259 2.541 6.039l-0.042-0.069c0.399 0.846 0.785 1.544 1.208 2.216l-0.051-0.086c1.164 1.723 2.41 3.228 3.787 4.602v0l84.159 84.159c5.457 5.691 13.123 9.228 21.615 9.228 16.529 0 29.929-13.4 29.929-29.929 0-8.492-3.537-16.158-9.217-21.605l-0.011-0.010-33.137-33.137h11.966c2.077-0.003 4.103-0.213 6.060-0.612l-0.196 0.033c1.065-0.255 1.943-0.526 2.798-0.844l-0.168 0.055c1.201-0.295 2.184-0.602 3.143-0.959l-0.197 0.064c1.207-0.557 2.199-1.092 3.155-1.679l-0.131 0.075c0.86-0.413 1.558-0.798 2.233-1.216l-0.103 0.059c3.325-2.228 6.1-4.995 8.269-8.205l0.067-0.106c0.351-0.571 0.728-1.269 1.070-1.987l0.061-0.143c0.516-0.829 1.051-1.821 1.529-2.845l0.075-0.18c0.294-0.758 0.6-1.732 0.853-2.727l0.041-0.192c0.263-0.868 0.605-1.709 0.815-2.63 0.359-1.763 0.564-3.79 0.564-5.865s-0.205-4.102-0.597-6.061l0.033 0.196c-0.262-1.059-0.541-1.937-0.869-2.79l0.054 0.16c-0.294-1.187-0.6-2.161-0.957-3.111l0.063 0.191c-0.559-1.21-1.094-2.201-1.68-3.158l0.076 0.133c-0.413-0.859-0.798-1.557-1.216-2.233l0.059 0.102c-1.163-1.723-2.409-3.228-3.787-4.602l-87.657-87.684c-5.413-5.419-12.894-8.772-21.158-8.772s-15.745 3.352-21.158 8.772v0zM420.609 81.985c-5.419 5.413-8.772 12.894-8.772 21.158s3.352 15.745 8.772 21.158v0l93.968 93.995h-66.985c-2.077 0.004-4.103 0.214-6.061 0.612l0.196-0.033c-0.92 0.184-1.762 0.526-2.63 0.789-1.205 0.307-2.187 0.622-3.144 0.987l0.199-0.066c-1.203 0.553-2.186 1.080-3.136 1.656l0.138-0.078c-0.71 0.394-1.473 0.71-2.157 1.183-3.312 2.233-6.078 4.999-8.243 8.204l-0.068 0.107c-0.447 0.684-0.789 1.446-1.183 2.157-0.505 0.818-1.032 1.802-1.502 2.816l-0.076 0.182c-0.303 0.768-0.619 1.75-0.878 2.754l-0.042 0.191c-0.256 0.687-0.518 1.567-0.73 2.465l-0.033 0.165c-0.37 1.763-0.582 3.789-0.582 5.865s0.212 4.102 0.616 6.058l-0.033-0.193c0.25 1.073 0.512 1.952 0.819 2.81l-0.056-0.18c0.297 1.188 0.612 2.17 0.982 3.125l-0.061-0.18c0.536 1.199 1.063 2.191 1.646 3.145l-0.068-0.12c0.394 0.684 0.71 1.446 1.157 2.13 1.157 1.725 2.404 3.231 3.785 4.6l88.184 88.184h-298.737c-119.234 0-215.893 96.659-215.893 215.893s96.659 215.893 215.893 215.893v0c3.34 0 6.68-0.263 10.020-0.447 50.716 89.945 145.63 149.689 254.497 149.689 136.738 0 251.463-94.25 282.755-221.33l0.416-1.998c36.352 33.048 84.868 53.282 138.11 53.282 111.137 0 201.682-88.165 205.51-198.369l0.010-0.35c44.327-14.396 75.807-55.332 75.807-103.62 0-60.046-48.677-108.722-108.722-108.722-0.004 0-0.009 0-0.013 0h-245.479l-24.406-24.406h11.966c0.007 0 0.015 0 0.024 0 2.067 0 4.085-0.211 6.033-0.612l-0.192 0.033c1.065-0.256 1.943-0.526 2.798-0.844l-0.168 0.055c1.202-0.296 2.185-0.602 3.143-0.959l-0.198 0.064c1.195-0.543 2.187-1.078 3.139-1.671l-0.115 0.067c0.86-0.413 1.557-0.798 2.233-1.216l-0.103 0.059c3.323-2.23 6.097-4.997 8.269-8.205l0.068-0.106c0.364-0.584 0.741-1.282 1.078-2.004l0.053-0.127c0.516-0.829 1.051-1.821 1.529-2.845l0.075-0.18c0.292-0.755 0.598-1.729 0.852-2.724l0.042-0.195c0.263-0.894 0.605-1.736 0.815-2.63 0.359-1.763 0.565-3.79 0.565-5.865s-0.206-4.101-0.597-6.061l0.033 0.196c-0.255-1.050-0.535-1.927-0.866-2.779l0.051 0.149c-0.294-1.188-0.601-2.162-0.957-3.111l0.063 0.192c-0.563-1.214-1.098-2.205-1.683-3.163l0.079 0.139c-0.413-0.86-0.798-1.557-1.216-2.233l0.059 0.103c-1.163-1.723-2.409-3.228-3.787-4.602l-87.71-87.736c-5.457-5.691-13.123-9.228-21.615-9.228-16.529 0-29.929 13.4-29.929 29.929 0 8.492 3.537 16.158 9.217 21.605l0.011 0.010 36.635 36.583h-11.966c-2.072 0.009-4.087 0.229-6.032 0.639l0.193-0.034c-1.080 0.264-1.958 0.535-2.815 0.848l0.185-0.059c-1.201 0.305-2.183 0.62-3.14 0.986l0.194-0.065c-1.204 0.554-2.187 1.080-3.137 1.656l0.138-0.078c-0.71 0.394-1.446 0.71-2.13 1.157-3.311 2.234-6.077 5-8.243 8.204l-0.068 0.107c-0.358 0.577-0.743 1.284-1.094 2.011l-0.063 0.146c-0.499 0.812-1.025 1.795-1.498 2.808l-0.080 0.19c-0.298 0.759-0.613 1.741-0.876 2.744l-0.045 0.201c-0.263 0.894-0.605 1.709-0.789 2.63-0.363 1.763-0.571 3.79-0.571 5.865s0.208 4.102 0.604 6.060l-0.033-0.195c0.184 0.92 0.526 1.762 0.789 2.63 0.514 2.253 1.377 4.24 2.541 6.013l-0.043-0.069c0.394 0.71 0.684 1.446 1.157 2.157 1.164 1.723 2.41 3.228 3.787 4.602v0l33.137 33.137h-144.884l-79.477-79.451h67.038c2.073-0.012 4.089-0.222 6.040-0.612l-0.201 0.034c1.050-0.255 1.927-0.535 2.778-0.866l-0.149 0.051c1.201-0.295 2.184-0.602 3.143-0.959l-0.197 0.064c1.207-0.557 2.199-1.092 3.155-1.679l-0.131 0.075c0.71-0.394 1.446-0.684 2.13-1.131 3.324-2.238 6.099-5.013 8.269-8.23l0.068-0.107c0.351-0.571 0.728-1.269 1.070-1.987l0.061-0.143c0.523-0.835 1.058-1.827 1.533-2.853l0.071-0.172c0.292-0.755 0.598-1.729 0.852-2.724l0.042-0.196c0.264-0.69 0.535-1.568 0.755-2.466l0.034-0.164c0.367-1.763 0.577-3.789 0.577-5.865s-0.21-4.102-0.61-6.059l0.033 0.194c-0.253-1.060-0.524-1.939-0.842-2.793l0.053 0.164c-0.296-1.191-0.602-2.165-0.958-3.114l0.064 0.195c-0.551-1.202-1.087-2.194-1.676-3.149l0.072 0.125c-0.413-0.86-0.798-1.557-1.216-2.233l0.059 0.103c-1.163-1.723-2.409-3.228-3.787-4.602l-145.096-145.069c-5.413-5.419-12.894-8.772-21.158-8.772s-15.745 3.352-21.158 8.772v0zM780.519 644.559c60.182-19.133 103.021-74.519 103.021-139.91 0-32.855-10.815-63.185-29.078-87.623l0.275 0.384h219.496c26.967 0.026 48.818 21.894 48.818 48.865 0 26.987-21.877 48.865-48.865 48.865-12.042 0-23.066-4.356-31.584-11.578l0.071 0.059c-5.174-4.388-11.928-7.055-19.304-7.055-16.533 0-29.936 13.403-29.936 29.936 0 9.157 4.111 17.354 10.589 22.845l0.043 0.036c12.026 10.219 26.526 17.919 42.457 22.082l0.754 0.167c-4.734 76.802-68.18 137.298-145.755 137.298-50.146 0-94.387-25.278-120.677-63.787l-0.324-0.503zM59.91 573.55c0.105-86.134 69.902-155.931 156.025-156.035h520.742c0.003 0 0.006 0 0.010 0 48.034 0 86.973 38.939 86.973 86.973s-38.939 86.973-86.973 86.973c-21.453 0-41.092-7.767-56.258-20.643l0.125 0.103c-5.18-4.409-11.949-7.090-19.343-7.090-16.531 0-29.931 13.401-29.931 29.931 0 9.136 4.093 17.316 10.546 22.806l0.042 0.035c19.151 16.261 42.83 27.766 68.885 32.402l0.888 0.131c-0.997 126.943-104.136 229.466-231.219 229.466-79.498 0-149.626-40.12-191.242-101.216l-0.515-0.802c23.764-8.602 44.315-20.283 62.466-34.835l-0.425 0.329c6.876-5.533 11.239-13.947 11.239-23.38 0-16.534-13.404-29.938-29.938-29.938-7.101 0-13.624 2.472-18.757 6.603l0.058-0.045c-26.25 21.295-60.068 34.19-96.898 34.19-0.144 0-0.289 0-0.433-0.001h0.022c-86.194-0.030-156.066-69.874-156.141-156.055v-0.007z");
                 map.Add(31, "(Wind)"); mapIcon.Add(31, "M359.112 117.499c0 23.691 19.205 42.896 42.896 42.896s42.896-19.205 42.896-42.896v0c0.086-64.647 52.469-117.030 117.108-117.116h0.008c77.533 0.086 140.363 62.915 140.448 140.44v0.008c-0.107 92.29-74.915 167.072-167.205 167.136h-492.368c-23.691 0-42.896 19.205-42.896 42.896s19.205 42.896 42.896 42.896v0h492.361c139.619-0.172 252.756-113.309 252.928-252.911v-0.017c-0.193-124.83-101.335-225.972-226.147-226.165h-0.018c-111.985 0.129-202.736 90.854-202.908 202.816v0.016zM602.391 459.461c-23.691 0-42.896 19.205-42.896 42.896s19.205 42.896 42.896 42.896v0h262.653c92.311 0.107 167.109 74.932 167.174 167.243v0.006c-0.086 77.533-62.915 140.363-140.44 140.448h-0.008c-64.647-0.086-117.030-52.469-117.116-117.108v-0.008c0-23.691-19.205-42.896-42.896-42.896s-42.896 19.205-42.896 42.896v0c0.171 111.979 90.923 202.704 202.896 202.832h0.012c124.83-0.193 225.972-101.335 226.165-226.147v-0.018c-0.172-139.64-113.326-252.794-252.949-252.966h-0.017zM42.896 459.461c-23.691 0-42.896 19.205-42.896 42.896s19.205 42.896 42.896 42.896v0h262.728c92.303 0.107 167.093 74.937 167.136 167.245v0.004c-0.15 77.505-62.972 140.288-140.478 140.373h-0.008c-64.647-0.086-117.030-52.469-117.116-117.108v-0.008c0-23.691-19.205-42.896-42.896-42.896s-42.896 19.205-42.896 42.896v0c0.129 112.011 90.897 202.779 202.896 202.908h0.012c124.83-0.193 225.972-101.335 226.165-226.147v-0.018c-0.15-139.702-113.403-252.901-253.11-252.966h-0.006z");
             }
-            
+
             ListView listView = new ListView();
 
             TextBlock seperator = new TextBlock();
             TextBlock seperator2 = new TextBlock();
-            seperator.Text = "---------------------------------------------------------------------------";
+            seperator.Text = "------------------------------------------------------------------------------------------------------------------------------------------------------";
             seperator2.Text = seperator.Text;
 
             Windows.UI.Xaml.Media.AcrylicBrush acrylicBrush = new Windows.UI.Xaml.Media.AcrylicBrush();
@@ -559,10 +691,10 @@ namespace iShell
                     jToken = jToken.SelectToken("days").First;
                     TextBlock forecast = new TextBlock();
                     TextBlock stationName = new TextBlock();
-                    stationName.Text = "Wetter in " + arg1;
+                    stationName.Text = "🌥️ Wetter in " + arg1;
                     stationName.FontWeight = FontWeights.Bold;
 
-                    forecast.Text += "Vorhersage für " + jToken.SelectToken("dayDate").ToString() + "\n";
+                    //forecast.Text += "Vorhersage für " + jToken.SelectToken("dayDate").ToString() + "\n";
 
                     String weatherSummary;
                     map.TryGetValue((int)jToken.SelectToken("icon"), out weatherSummary);
@@ -583,17 +715,31 @@ namespace iShell
                     };
                     BindingOperations.SetBinding(path, Windows.UI.Xaml.Shapes.Path.DataProperty, b);
                     weatherIcon.Children.Add(path);
-                    weatherIcon.Height = 80;
-                    weatherIcon.Width = 50;
+
+                    if (widgetSize >= 3 || allWidgetsPage) { 
+                        weatherIcon.Height = 80;
+                        weatherIcon.Width = 50;
+                    }
+                    if (widgetSize< 3 && !allWidgetsPage) {
+                        weatherIcon.Height = 60;
+                        weatherIcon.Width = 45;
+                        forecast.FontSize = 11;
+                    }
+
+                    stationName.TextWrapping = TextWrapping.Wrap;
                     listView.Items.Add(stationName);
                     listView.Items.Add(seperator);
                     listView.Items.Add(weatherIcon);
                     listView.Items.Add(forecast);
 
                 }
-                listView.Height = 300;
-                listView.Name = "DWD," + Option + "," + arg1 + "," + arg2;
 
+                listView.Height = getTileSize(0);
+                listView.Width = getTileSize(1);
+
+                if (!arg2.Equals("null"))
+                    listView.Name = "DWDWeather(" + Option + ", \"" + arg1 + "\", \"" + arg2 + "\")";
+                else listView.Name = "DWDWeather(" + Option + ", \"" + arg1 + "\", null)";
                 listView.Background = acrylicBrush;
                 return listView;
             }
@@ -644,14 +790,35 @@ namespace iShell
 
                 TextBlock warnPos = new TextBlock();
                 warnPos.FontWeight = FontWeights.Bold;
-                warnPos.Text = "Wetter Warnungen für " + arg1 + " " + arg2;
+                warnPos.Text = "🌩️ Wetter Warnungen für " + arg1 + " " + arg2;
 
                 listViewWarn.Items.Add(warnPos);
                 listViewWarn.Items.Add(seperator2);
                 listViewWarn.Items.Add(textWarn);
+                if (textWarn.Text.Contains("Keine Warnungen"))
+                {
+                    TextBlock noWarn = new TextBlock();
+                    noWarn.Text = "\n✅";
+                    noWarn.FontSize = 60;
+                    noWarn.Width = 88;
+                    if (widgetSize < 3 && !allWidgetsPage)
+                    {
+                        listViewWarn.Items.Remove(textWarn);
+                        noWarn.Text = "✅";
+                    }
+                    listViewWarn.Items.Add(noWarn);
+                }
+
+                warnPos.TextWrapping = TextWrapping.Wrap;
                 textWarn.TextWrapping = TextWrapping.Wrap;
-                listViewWarn.Height = 300;
-                listViewWarn.Name = "DWD," + Option + "," + arg1 + "," + arg2;
+
+
+                listViewWarn.Height = getTileSize(0);
+                listViewWarn.Width = getTileSize(1);
+
+                if (!arg2.Equals("null"))
+                    listViewWarn.Name = "DWDWeather(" + Option + ", \"" + arg1 + "\", \"" + arg2 + "\")";
+                else listViewWarn.Name = "DWDWeather(" + Option + ", \"" + arg1 + "\", null)";
                 listViewWarn.Background = acrylicBrush;
                 return listViewWarn;
             }
@@ -664,43 +831,56 @@ namespace iShell
         public ListView CalendarTile()
         {
             ListView listView = new ListView();
-            listView.Name = "Calendar";
-            listView.Height = 300;
+            listView.Name = "CalendarTile()";
+
+            listView.Height = getTileSize(0);
+            listView.Width = getTileSize(1);
+
             CalendarView calendarView = new CalendarView();
             calendarView.Background = null;
-            calendarView.Height = 200;
+
+            TranslateTransform translateTransform = new TranslateTransform();
+            if (widgetSize >= 3 || allWidgetsPage)
+            {
+                calendarView.Height = 230;
+                calendarView.Width = 320;
+                translateTransform.X = 10;
+                calendarView.NumberOfWeeksInView = 3;
+            }
 
             TextBlock textBlock = new TextBlock();
-            textBlock.Text = "Kalender";
+            textBlock.Text = "📅 Kalender";
             textBlock.FontWeight = FontWeights.Bold;
 
             TextBlock seperator = new TextBlock();
-            seperator.Text = "---------------------------------------------------------------------------";
+            seperator.Text = "------------------------------------------------------------------------------------------------------------------------------------------------------";
 
             listView.Items.Add(textBlock);
             listView.Items.Add(seperator);
             listView.Items.Add(calendarView);
 
-            TranslateTransform translateTransform = new TranslateTransform();
-            translateTransform.X = 10;
 
-            ((CalendarView) listView.Items[2]).RenderTransform = translateTransform;
+
+            ((CalendarView)listView.Items[2]).RenderTransform = translateTransform;
             return listView;
         }
 
         public ListView Clock()
         {
             ListView listView = new ListView();
-            listView.Name = "Clock Date";
-            listView.Height = 300;
+            listView.Name = "Clock()";
+
+            listView.Height = getTileSize(0);
+            listView.Width = getTileSize(1);
+
             TextBlock textBlock = new TextBlock();
-            textBlock.Text = "Uhrzeit und Datum";
+            textBlock.Text = "⏲️ Uhrzeit und Datum";
             textBlock.FontWeight = FontWeights.Bold;
 
             TextBlock seperator = new TextBlock();
-            seperator.Text = "---------------------------------------------------------------------------";
+            seperator.Text = "------------------------------------------------------------------------------------------------------------------------------------------------------";
 
-            
+
             listView.Items.Add(textBlock);
             listView.Items.Add(seperator);
             listView.Items.Add(clockTime = new TextBlock()
@@ -708,10 +888,13 @@ namespace iShell
                 FontWeight = FontWeights.SemiLight,
                 FontSize = 37,
                 CharacterSpacing = 30,
-                TextAlignment = TextAlignment.Center,
-
-
+                TextAlignment = TextAlignment.Center
             });
+
+            if (widgetSize == 1 && !allWidgetsPage)
+                clockTime.FontSize = 15;
+            if (widgetSize == 2 && !allWidgetsPage)
+                clockTime.FontSize = 25;
 
             return listView;
 
@@ -719,8 +902,50 @@ namespace iShell
 
         //---------------------------------------------------------------------------------------
         //Events
-        private void loadText_SelectionChanged(object sender, RoutedEventArgs e)
+        private void tClock_Tick(object sender, object e)
         {
+            tbTimeDate.Text = System.DateTime.Now.ToString("HH:mm") + " Uhr" + System.Environment.NewLine +
+                System.DateTime.Now.Date.ToString("d");
+
+            if (clockTime != null)
+                if (widgetSize != 2)
+                clockTime.Text = System.DateTime.Now.ToString("HH:mm:ss") + " Uhr\n" + "---------------\n" +
+                        System.DateTime.Now.ToString("dddd") + System.Environment.NewLine + System.DateTime.Now.Date.ToString("d");
+            else clockTime.Text = System.DateTime.Now.ToString("HH:mm:ss") + " Uhr\n" +
+                        System.DateTime.Now.ToString("dddd") + " || " + System.DateTime.Now.Date.ToString("d");
+
+            refreshTime++;
+            pgbRefresh.Value = refreshTime / 3;
+            if (refreshTime > 300 && !allWidgetsPage)
+            {
+                refreshItems();
+            }
+            if (refreshTime % 10 == 0 && !allWidgetsPage)
+            {
+                activeItem++;
+                if (activeItem == lvMain.Items.Count)
+                    activeItem = 0;
+                lvMain.ScrollIntoView(lvMain.Items[activeItem]);
+                bool internetBefore = internet;
+                testInternet();
+                if (internet && !internetBefore)
+                {
+                    refreshItems();
+                }
+
+            }
+            if (refreshTime == 1 && (splashText.Text.Equals("")) && !allWidgetsPage)
+            {
+                if (internet == true)
+                    splashText.Text = "Übersicht";
+                else
+                    splashText.Text = "⚠️ Kein Netzwerkzugriff";
+                refreshTime = 0;
+                loadSpinner.IsActive = false;
+                loadText.Text = "";
+                loadItems();
+                InitAnim(0);
+            }
 
         }
 
@@ -731,21 +956,6 @@ namespace iShell
             {
                 lvWidgets.Add(item);
             }
-        }
-
-        private void cmdRefresh_Click(object sender, RoutedEventArgs e)
-        {
-            ElementsNotVisible();
-            loadSpinner.IsActive = true;
-            testInternet();
-            loadText.Text = "Aktualisiere Inhalte...";
-            splashText.Text = "";
-            refreshTime = 0;
-        }
-
-        private void splashText_SelectionChanged(object sender, RoutedEventArgs e)
-        {
-
         }
 
         private void WebView_NavigationCompleted(WebView2 sender, Microsoft.Web.WebView2.Core.CoreWebView2NavigationCompletedEventArgs args)
@@ -779,9 +989,202 @@ namespace iShell
 
         }
 
+        private void AnimDone2Start(object sender, object e)
+        {
+            allWidgetsPage = false;
+            loadItems();
+            InitChangePage(3);
+            splashText.Text = "Übersicht";
+            cmdNextPageString.Text = "Alle Kacheln";
+            var b = new Binding
+            {
+                Source = "M504 256C504 119 393 8 256 8S8 119 8 256s111 248 248 248 248-111 248-248zm-448 0c0-110.5 89.5-200 200-200s200 89.5 200 200-89.5 200-200 200S56 366.5 56 256zm72 20v-40c0-6.6 5.4-12 12-12h116v-67c0-10.7 12.9-16 20.5-8.5l99 99c4.7 4.7 4.7 12.3 0 17l-99 99c-7.6 7.6-20.5 2.2-20.5-8.5v-67H140c-6.6 0-12-5.4-12-12z"
+            };
+            BindingOperations.SetBinding(pathNextPage, Windows.UI.Xaml.Shapes.Path.DataProperty, b);
+            cmdRefresh.IsEnabled = true;
+            lvMain.CanReorderItems = true;
+        }
+
+        private void AnimDone2All(object sender, object e)
+        {
+            allWidgetsPage = true;
+            loadItems();
+            InitChangePage(2);
+            splashText.Text = "Alle Kacheln";
+            cmdNextPageString.Text = "Zurück";
+            var b = new Binding
+            {
+                Source = "M8 256c0 137 111 248 248 248s248-111 248-248S393 8 256 8 8 119 8 256zm448 0c0 110.5-89.5 200-200 200S56 366.5 56 256 145.5 56 256 56s200 89.5 200 200zm-72-20v40c0 6.6-5.4 12-12 12H256v67c0 10.7-12.9 16-20.5 8.5l-99-99c-4.7-4.7-4.7-12.3 0-17l99-99c7.6-7.6 20.5-2.2 20.5 8.5v67h116c6.6 0 12 5.4 12 12z"
+            };
+            BindingOperations.SetBinding(pathNextPage, Windows.UI.Xaml.Shapes.Path.DataProperty, b);
+            cmdRefresh.IsEnabled = false;
+            lvMain.CanReorderItems = false;
+        }
+
+        private void CmdRem_Click(object sender, RoutedEventArgs e)
+        {
+            Button thiscmd = sender as Button;
+            foreach (ListView item in lvMain.Items)
+            {
+                if (item.Name.Equals(thiscmd.Name.Substring(6)))
+                {
+                    if (!allWidgetsPage)
+                    {
+                        widgetEnabled.Remove(item.Name);
+                        widgetEnabled.Add(item.Name, false);
+                        lvMain.Items.Remove(item);
+                        if (lvMain.Items.Count == 0)
+                        {
+                            TextBlock textBlock = new TextBlock();
+                            textBlock.Text = "Keine Elemente verfügbar";
+                            textBlock.FontStyle = FontStyle.Italic;
+                            lvMain.Items.Add(textBlock);
+                        }
+                    }
+
+                    if (allWidgetsPage)
+                    {
+                        Boolean value;
+                        if (widgetEnabled.TryGetValue(thiscmd.Name.Substring(6), out value))
+                        {
+                            if (value)
+                            {
+                                widgetEnabled.Remove(item.Name);
+                                widgetEnabled.Add(item.Name, false);
+                                thiscmd.Content = "Hinzufügen";
+                            }
+                            else if (!value)
+                            {
+                                widgetEnabled.Remove(item.Name);
+                                widgetEnabled.Add(item.Name, true);
+                                thiscmd.Content = "Entfernen";
+                            }
+                        }
+                    }
+                    break;
+                }
+            }
+        }
+
+        private void CmdSize_Click(object sender, RoutedEventArgs e)
+        {
+            Button cmd = sender as Button;
+            if (widgetSize == 1)
+            {
+                widgetSize = 2;
+                cmdSizeText = "Groß";
+                cmd.Content = cmdSizeText;
+            }
+            else if (widgetSize == 2)
+            {
+                widgetSize = 3;
+                cmdSizeText = "Klein";
+                cmd.Content = cmdSizeText;
+            }
+            else if (widgetSize == 3)
+            {
+                widgetSize = 1;
+                cmdSizeText = "Mittel";
+                cmd.Content = cmdSizeText;
+            }
+            // unused
+            else if (widgetSize == 4)
+            {
+                widgetSize = 1;
+                cmdSizeText = "Klein rechteckig";
+                cmd.Content = cmdSizeText;
+            }
+            if (!allWidgetsPage)
+                refreshItems();
+        }
+
+        private void cmdNextPage_Click(object sender, RoutedEventArgs e)
+        {
+            if (allWidgetsPage == false)
+                InitChangePage(0);
+            if (allWidgetsPage == true)
+                InitChangePage(1);
+        }
+
+        private void cmdRefresh_Click(object sender, RoutedEventArgs e)
+        {
+            refreshItems();
+        }
+
+        //---------------------------------------------------------------------------------------
+        //Unused Events
+        private void loadText_SelectionChanged(object sender, RoutedEventArgs e)
+        {
+
+        }
+
+        private void splashText_SelectionChanged(object sender, RoutedEventArgs e)
+        {
+
+        }
+
         private void tbTimeDate_SelectionChanged(object sender, RoutedEventArgs e)
         {
 
+        }
+
+        //---------------------------------------------------------------------------------------
+        //General Methods
+
+        public void refreshItems()
+        {
+            refreshTime = 0;
+            splashText.Text = "";
+            ElementsNotVisible();
+            loadSpinner.IsActive = true;
+            loadText.Text = "Aktualisiere Inhalte...";
+        }
+
+        public static DateTime GetLinkerTimestampUtc(Assembly assembly)
+        {
+            var location = assembly.Location;
+            return GetLinkerTimestampUtc(location);
+        }
+
+        public static DateTime GetLinkerTimestampUtc(string filePath)
+        {
+            const int peHeaderOffset = 60;
+            const int linkerTimestampOffset = 8;
+            var bytes = new byte[2048];
+
+            using (var file = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+            {
+                file.Read(bytes, 0, bytes.Length);
+            }
+
+            var headerPos = BitConverter.ToInt32(bytes, peHeaderOffset);
+            var secondsSince1970 = BitConverter.ToInt32(bytes, headerPos + linkerTimestampOffset);
+            var dt = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+            return dt.AddSeconds(secondsSince1970 + 7200);
+        }
+
+        private void ElementsNotVisible()
+        {
+            tbTimeDate.Visibility = Visibility.Collapsed;
+            cmdRefresh.Visibility = Visibility.Collapsed;
+            recTopBar.Visibility = Visibility.Collapsed;
+            lvMain.Visibility = Visibility.Collapsed;
+            pgbRefresh.Visibility = Visibility.Collapsed;
+            networkStatus.Visibility = Visibility.Collapsed;
+            tbLanguage.Visibility = Visibility.Collapsed;
+            cmdNextPage.Visibility = Visibility.Collapsed;
+        }
+
+        private void ElementsVisible()
+        {
+            tbTimeDate.Visibility = Visibility.Visible;
+            cmdRefresh.Visibility = Visibility.Visible;
+            recTopBar.Visibility = Visibility.Visible;
+            lvMain.Visibility = Visibility.Visible;
+            pgbRefresh.Visibility = Visibility.Visible;
+            networkStatus.Visibility = Visibility.Visible;
+            tbLanguage.Visibility = Visibility.Visible;
+            cmdNextPage.Visibility = Visibility.Visible;
         }
     }
 }

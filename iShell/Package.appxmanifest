@@ -37,7 +37,7 @@
       Executable="$targetnametoken$.exe"
       EntryPoint="iShell.App">
       <uap:VisualElements
-        DisplayName="iShell"
+        DisplayName="ℹ️ iShell"
         Square150x150Logo="Assets\Square150x150Logo.png"
         Square44x44Logo="Assets\Square44x44Logo.png"
         Description="iShell"
